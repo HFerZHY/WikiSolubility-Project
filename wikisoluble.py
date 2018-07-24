@@ -2,10 +2,13 @@ import tkinter as tk
 import tkinter.font as tkFont
 import time
 from WSdata import *
+from tkinter.filedialog import askdirectory
+from PIL import ImageGrab
+from tkinter.messagebox import showinfo
 
 window = tk.Tk()
 window.title('Wiki Solubility')
-#window.geometry('850x600')
+window.resizable(width = False, height = False)
 
 prev = 0
 curr = 0
@@ -35,7 +38,6 @@ def draw(m):
 	dectemp = 0
 	ifmis = False
 	mistemp = 0
-	#print('draw started')
 	C.delete('all')
 	max = 0
 	min = 2000
@@ -269,6 +271,8 @@ def backgr():
 		Linf['fg'] = '#0F102E'
 		Bcp['bg'] = '#CDD7E2'
 		Bcp['fg'] = '#0F102E'
+		Bex['bg'] = '#CDD7E2'
+		Bex['fg'] = '#0F102E'
 		Lcpr['bg'] = '#CDD7E2'
 		Lcpr['fg'] = '#0F102E'
 	else:
@@ -289,6 +293,8 @@ def backgr():
 		Bbg['fg'] = '#FFFFFF'
 		Bcp['bg'] = '#000022'
 		Bcp['fg'] = '#FFFFFF'
+		Bex['bg'] = '#000022'
+		Bex['fg'] = '#FFFFFF'
 		Linf['bg'] = '#000022'
 		Linf['fg'] = '#FFFFFF'
 		Lcpr['bg'] = '#000022'
@@ -298,6 +304,24 @@ def backgr():
 	else:
 		normdraw(curr)
 	window.update()
+
+def getter(widget, path):
+	x=frame.winfo_rootx()+widget.winfo_x()
+	y=frame.winfo_rooty()+widget.winfo_y()
+	x1=x+widget.winfo_width()
+	y1=y+widget.winfo_height()
+	ImageGrab.grab().crop((x,y,x1,y1)).save(path)
+
+def export():
+	global prevcpr, prev, curr
+	if prevcpr:
+		pngpath = '%s/%s_%s_comparision.png' % (askdirectory(), sublist[prev].formula, sublist[curr].formula)
+	else:
+		pngpath = '%s/%s_chart.png' % (askdirectory(), sublist[curr].formula)
+	window.wm_attributes('-topmost', 1)
+	getter(C, pngpath)
+	showinfo('Export Successful', 'Successfully exported to %s' % pngpath)
+	return
 
 L = tk.Label(frame, text = 'Enter substance name or formula:', font = ft2, bg = '#CDD7E2')
 L.grid(row = 1, column = 1, sticky = 'e')
@@ -317,11 +341,14 @@ Bbg.grid(row = 1, column = 4)
 Bcp = tk.Button(frame, text = 'Compare', command = compare, font = ft1, bg = '#CDD7E2')
 Bcp.grid(row = 1, column = 5)
 
-Linf = tk.Label(frame, text = 'This gadget is created by HFer-Kerman.\nAll data is from Wikipedia and follows CC BY-SA 3.0.\nVersion 0.2.1   2018/07/03', font = ft3)
-Linf.grid(row = 3, column = 1, columnspan = 3)
+Linf = tk.Label(frame, text = 'This gadget is created by HFer-Kerman.\nAll data is from Wikipedia and follows CC BY-SA 3.0.\nVersion 0.2.2   2018/07/16   License: MIT', font = ft3)
+Linf.grid(row = 3, column = 1, columnspan = 2)
 
 Lcpr = tk.Label(frame, textvariable = varpc, font = ft3)
-Lcpr.grid(row = 3, column = 4, columnspan = 2)
+Lcpr.grid(row = 3, column = 3, columnspan = 2)
+
+Bex = tk.Button(frame, text = 'Export', command = export, font = ft1, bg = '#CDD7E2')
+Bex.grid(row = 3, column = 5)
 
 E.bind('<KeyPress-Return>', search)
 
