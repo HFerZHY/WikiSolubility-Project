@@ -1,15 +1,12 @@
 import tkinter as tk
 import tkinter.font as tkFont
 import time
+import io
 from WSdata import *
 from tkinter.filedialog import askdirectory
 from tkinter.messagebox import showinfo
+from PIL import Image
 
-try:
-    # ImageGrab is not available on linux
-    from PIL import ImageGrab
-except Exception as e:
-    pass
 
 window = tk.Tk()
 window.title('Wiki Solubility')
@@ -465,25 +462,24 @@ def backgr():
     window.update()
 
 
-def getter(widget, path):
-    x = frame.winfo_rootx() + widget.winfo_x()
-    y = frame.winfo_rooty() + widget.winfo_y()
-    x1 = x + widget.winfo_width()
-    y1 = y + widget.winfo_height()
-    # ImageGrab.grab().crop((x, y, x1, y1)).save(path)
-
-
 def export():
     global prevcpr, prev, curr
+
+    directory = askdirectory()
+
+    if not directory:
+        showinfo('Export Failed', 'No direcotry selected!')
+
     if prevcpr:
-        pngpath = '%s/%s_%s_comparision.png' % (
-            askdirectory(), sublist[prev].formula, sublist[curr].formula)
+        path = '%s/%s_%s_comparision.jpg' % (
+            directory, sublist[prev].formula, sublist[curr].formula)
     else:
-        pngpath = '%s/%s_chart.png' % (askdirectory(), sublist[curr].formula)
-    window.wm_attributes('-topmost', 1)
-    getter(C, pngpath)
-    showinfo('Export Successful', 'Successfully exported to %s' % pngpath)
-    return
+        path = '%s/%s_chart.jpg' % (directory, sublist[curr].formula)
+    
+    ps = C.postscript(colormode='color')
+    img = Image.open(io.BytesIO(ps.encode('utf-8')))
+    img.save(path)
+    showinfo('Export Successful', 'Successfully exported to %s~' % path)
 
 
 L = tk.Label(frame,
