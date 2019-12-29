@@ -1,14 +1,19 @@
 class substance():
-	def __init__(self, name, formula):
-		self.solub = {}
-		self.name = name
-		self.formula = formula
-	def setName(self, name):
-		self.name = name
-	def setFormula(self, formula):
-		self.formula = formula
-	def getInform(self):
-		return('Name: %s\nFormula: %s\nSolubility: %s' % (self.name, self.formula, str(self.solub)))
+    def __init__(self, name, formula):
+        self.solub = {}
+        self.name = name
+        self.formula = formula
+
+    def setName(self, name):
+        self.name = name
+
+    def setFormula(self, formula):
+        self.formula = formula
+
+    def getInform(self):
+        return ('Name: %s\nFormula: %s\nSolubility: %s' %
+                (self.name, self.formula, str(self.solub)))
+
 
 sublist = []
 
