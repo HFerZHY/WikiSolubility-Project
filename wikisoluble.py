@@ -34,6 +34,16 @@ ctrdrw = False
 
 isdark = False
 
+ttlcolor = '#FFFFFF'
+cprcolor1 = '#FF6699'
+cprcolor2 = '#9966FF'
+cprtxtcolor1 = '#183E58'
+cprtxtcolor2 = '#796973'
+
+normdot = '#FFFFEE'
+normtext = '#00FFEE'
+normline = '#FF6699'
+
 # set canvas
 C = tk.Canvas(frame,
               bg='#FFFFFF',
@@ -68,10 +78,10 @@ def draw(index: int):
         try:
             slb_float = float(slb)
         except Exception:
-            if slb.find('×10') != -1:  #some data is in the form of num×10num
+            if slb.find('×10') != -1:  # some data is in the form of num×10num
                 base, exponent = map(float, slb.split('×10'))
                 slb_float = round(base, 3) * pow(10, exponent)
-            elif slb.find('ml') != -1:  #some data is in the form of num ml
+            elif slb.find('ml') != -1:  # some data is in the form of num ml
                 slblist = slb.partition('ml')
                 slb_float = round(float(slblist[0]), 2)
             elif slb.endswith(')'):
@@ -107,6 +117,37 @@ def realdraw(imformlist: list, dotcolor: str, textcolor: str, linecolor: str):
     m = imformlist[7]
     lastx = int
     lasty = int
+
+    # draw axis
+    C.create_line(50, 445, 525, 445, width=3, tag='line', fill=normline)
+    C.create_line(50, 445, 50, 25, width=3, tag='line', fill=normline)
+    for i in range(0, 11, 1):
+        C.create_oval(47 + 47.5 * i,
+                      442,
+                      53 + 47.5 * i,
+                      448,
+                      fill=normdot,
+                      width=0)
+        C.create_text(50 + 47.5 * i,
+                      460,
+                      text=str(i * 10) + '°C',
+                      fill=normtext,
+                      font=ft_subtitle,
+                      tag='text')
+    for i in range(0, 11, 1):
+        C.create_oval(47,
+                      442 - 42 * i,
+                      50,
+                      448 - 42 * i,
+                      fill=normdot,
+                      width=0)
+        C.create_text(25,
+                      445 - 42 * i,
+                      text=str(round(min_slb + (max_slb - min_slb) / 10 * i, 2)),
+                      fill=normtext,
+                      font=ft_subtitle,
+                      tag='text')
+
     for i in range(len(points)):
         # print(points[i])
         x = points[i][0] * 4.75 + 25
@@ -212,6 +253,7 @@ def normdraw(m):
         realdraw(lista, '#332255', '#40709F', '#284E6F')
     m1 = lista[7]
     cvstitle(m1, -1)
+    C.create_text(275, 530, text = 'Solubility Fold Line Diagram of\n%s (%s)' % ((sublist[m1].name), sublist[m1].formula), font = ft_bold, fill = ttlcolor)
     prevcpr = False
 
 
@@ -225,6 +267,9 @@ def contradraw(m1: int, m2: int):
     list2[2] = min(list1[2], list2[2])
 
     cvstitle(m1, m2)
+    C.create_text(275, 510, text = 'Solubility Comparison Fold Line Diagram of', font = ft_bold, fill = ttlcolor)
+    C.create_text(275, 525, text = '%s (%s)' % ((sublist[m1].name), sublist[m1].formula), font = ft_bold, fill = cprcolor1)
+    C.create_text(275, 540, text = '%s (%s)' % ((sublist[m2].name), sublist[m2].formula), font = ft_bold, fill = cprcolor2)
 
     if isdark:
         # dark mode
@@ -311,8 +356,8 @@ def search(ev=None):
                 normdraw(i)
                 return
             else:
-                allsubdict[
-                    sublist[i].name] = sublist[i].formula  # add to possble list
+                allsubdict[sublist[i].
+                           name] = sublist[i].formula  # add to possble list
                 match = i
 
     if len(allsubdict) == 1:  # only one possible
@@ -352,7 +397,7 @@ def compare():
 
 
 def backgr():
-    global isdark, prev, curr, prevcpr
+    global isdark, prev, curr, prevcpr, ttlcolor, cprcolor1, cprcolor2, normdot, normtext, normline, cprtxtcolor1, cprtxtcolor2
     if isdark:
         isdark = False
         frame['bg'] = '#CDD7E2'
@@ -373,10 +418,16 @@ def backgr():
         Linf['fg'] = '#0F102E'
         Bcp['bg'] = '#CDD7E2'
         Bcp['fg'] = '#0F102E'
-        Bex['bg'] = '#CDD7E2'
-        Bex['fg'] = '#0F102E'
         Lcpr['bg'] = '#CDD7E2'
         Lcpr['fg'] = '#0F102E'
+        ttlcolor = '#0F102E'
+        cprcolor1 = '#284E68'
+        cprcolor2 = '#897983'
+        cprtxtcolor1 = '#082E48'
+        cprtxtcolor2 = '#695963'
+        normdot = '#332255'
+        normtext = '#40709F'
+        normline = '#284E6F'
     else:
         isdark = True
         frame['bg'] = '#000022'
@@ -395,12 +446,18 @@ def backgr():
         Bbg['fg'] = '#FFFFFF'
         Bcp['bg'] = '#000022'
         Bcp['fg'] = '#FFFFFF'
-        Bex['bg'] = '#000022'
-        Bex['fg'] = '#FFFFFF'
         Linf['bg'] = '#000022'
         Linf['fg'] = '#FFFFFF'
         Lcpr['bg'] = '#000022'
         Lcpr['fg'] = '#FFFFFF'
+        ttlcolor = '#FFFFFF'
+        cprcolor1 = '#FF6699'
+        cprcolor2 = '#9966FF'
+        cprtxtcolor1 = '#DF4679'
+        cprtxtcolor2 = '#7946DF'
+        normdot = '#FFFFEE'
+        normtext = '#00FFEE'
+        normline = '#FF6699'
     if prevcpr:
         compare()
     else:
@@ -451,7 +508,11 @@ Bbg = tk.Button(frame,
                 bg='#CDD7E2')
 Bbg.grid(row=1, column=4)
 
-Bcp = tk.Button(frame, text='Compare', command=compare, font=ft_normal, bg='#CDD7E2')
+Bcp = tk.Button(frame,
+                text='Compare',
+                command=compare,
+                font=ft_normal,
+                bg='#CDD7E2')
 Bcp.grid(row=1, column=5)
 
 Linf = tk.Label(
@@ -464,7 +525,11 @@ Linf.grid(row=3, column=1, columnspan=2)
 Lcpr = tk.Label(frame, textvariable=varpc, font=ft_subtitle)
 Lcpr.grid(row=3, column=3, columnspan=2)
 
-Bex = tk.Button(frame, text='Export', command=export, font=ft_normal, bg='#CDD7E2')
+Bex = tk.Button(frame,
+                text='Export',
+                command=export,
+                font=ft_normal,
+                bg='#CDD7E2')
 Bex.grid(row=3, column=5)
 
 E.bind('<KeyPress-Return>', search)
