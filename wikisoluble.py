@@ -3,8 +3,13 @@ import tkinter.font as tkFont
 import time
 from WSdata import *
 from tkinter.filedialog import askdirectory
-from PIL import ImageGrab
 from tkinter.messagebox import showinfo
+
+try:
+    # ImageGrab is not available on linux
+    from PIL import ImageGrab
+except Exception as e:
+    pass
 
 window = tk.Tk()
 window.title('Wiki Solubility')
@@ -13,9 +18,9 @@ window.resizable(width=False, height=False)
 prev = 0
 curr = 0
 
-ft1 = tkFont.Font(family='Arial', size=10)
-ft2 = tkFont.Font(family='Arial', size=12, weight=tkFont.BOLD)
-ft3 = tkFont.Font(family='Arial', size=9, weight=tkFont.BOLD)
+ft_normal = tkFont.Font(family='Arial', size=10)
+ft_bold = tkFont.Font(family='Arial', size=12, weight=tkFont.BOLD)
+ft_subtitle = tkFont.Font(family='Arial', size=9, weight=tkFont.BOLD)
 
 frame = tk.Frame(bg="#FFFFFF")
 frame.grid(row=0, column=0)
@@ -29,6 +34,7 @@ ctrdrw = False
 
 isdark = False
 
+# set canvas
 C = tk.Canvas(frame,
               bg='#FFFFFF',
               width=550,
@@ -39,72 +45,61 @@ C = tk.Canvas(frame,
 C.grid(row=1, column=6, rowspan=3)
 
 
-def draw(m):
+def draw(index: int):
     global isdark
+    C.delete('all')
+
     ifdec = False
     dectemp = 0
     ifmis = False
     mistemp = 0
-    C.delete('all')
-    max = 0
-    min = 2000
+
+    max_slb = 0
+    min_slb = 2000
     points = []
-    for i in range(0, 101, 5):
-        temp = str(i) + '°C'
-        try:
-            slb = sublist[m].solub[temp]
-        except:
+
+    for temp_str, slb in sublist[index].solub.items():
+
+        if slb == 'N/A':
             continue
+
+        temp = int(temp_str.replace('°C', ''))
+
         try:
-            points.append([i, float(slb)])
-            if float(slb) > max:
-                max = float(slb)
-            if float(slb) < min:
-                min = float(slb)
-        except:
-            if slb == 'N/A':
-                continue
-            elif slb.find('×10') != -1:  #some data is in the form of num×10num
-                slblist = slb.partition('×10')
-                slbfloat = round(float(slblist[0]), 3) * (10**int(slblist[2]))
-                points.append([i, slbfloat])
-                if slbfloat > max:
-                    max = slbfloat
-                if slbfloat < min:
-                    min = slbfloat
+            slb_float = float(slb)
+        except Exception:
+            if slb.find('×10') != -1:  #some data is in the form of num×10num
+                base, exponent = map(float, slb.split('×10'))
+                slb_float = round(base, 3) * pow(10, exponent)
             elif slb.find('ml') != -1:  #some data is in the form of num ml
                 slblist = slb.partition('ml')
-                slbfloat = round(float(slblist[0]), 2)
-                points.append([i, slbfloat])
-                if slbfloat > max:
-                    max = slbfloat
-                if slbfloat < min:
-                    min = slbfloat
+                slb_float = round(float(slblist[0]), 2)
             elif slb.endswith(')'):
                 slblist = slb.replace('°C)', '').partition('(')
-                slbtemp = int(slblist[2])
-                slbfloat = float(slblist[0])
-                points.append([slbtemp, slbfloat])
-                if slbfloat > max:
-                    max = slbfloat
-                if slbfloat < min:
-                    min = slbfloat
+                temp = int(slblist[2])
+                slb_float = float(slblist[0])
             elif slb == 'dec':
                 ifdec = True
-                dectemp = i
+                dectemp = temp
             elif slb == 'miscible':
                 ifmis = True
-                mistemp = i
+                mistemp = temp
             else:
                 continue
-    return [points, max, min, ifdec, dectemp, ifmis, mistemp, m]
+
+        finally:
+            points.append([temp, slb_float])
+            max_slb = max(slb_float, max_slb)
+            min_slb = min(slb_float, min_slb)
+
+    return [points, max_slb, min_slb, ifdec, dectemp, ifmis, mistemp, index]
 
 
 def realdraw(imformlist: list, dotcolor: str, textcolor: str, linecolor: str):
     global ctrdrw, sublist
     points = imformlist[0]
-    max = imformlist[1]
-    min = imformlist[2]
+    max_slb = imformlist[1]
+    min_slb = imformlist[2]
     ifdec = imformlist[3]
     dectemp = imformlist[4]
     ifmis = imformlist[5]
@@ -113,12 +108,12 @@ def realdraw(imformlist: list, dotcolor: str, textcolor: str, linecolor: str):
     lastx = int
     lasty = int
     for i in range(len(points)):
-        #print(points[i])
+        # print(points[i])
         x = points[i][0] * 4.75 + 25
-        if max != min:
-            y = 445 - (points[i][1] - min) / (max - min) * 420
+        if max_slb != min_slb:
+            y = 445 - (points[i][1] - min_slb) / (max_slb - min_slb) * 420
         else:
-            y = 445 - points[i][1] / max * 420
+            y = 445 - points[i][1] / max_slb * 420
         if i != 0:
             C.create_line(lastx,
                           lasty,
@@ -132,7 +127,7 @@ def realdraw(imformlist: list, dotcolor: str, textcolor: str, linecolor: str):
                       y,
                       text=str(points[i][0]) + '°C\n' + str(points[i][1]),
                       fill=textcolor,
-                      font=ft3,
+                      font=ft_subtitle,
                       tag='text')
         lastx = x
         lasty = y
@@ -145,7 +140,7 @@ def realdraw(imformlist: list, dotcolor: str, textcolor: str, linecolor: str):
                       text=sublist[m].formula + '\nDecomposes\nAt ' +
                       str(dectemp) + '°C',
                       fill='#FF0000',
-                      font=ft3,
+                      font=ft_subtitle,
                       tag='text',
                       anchor='w')
     if ifmis:
@@ -157,7 +152,7 @@ def realdraw(imformlist: list, dotcolor: str, textcolor: str, linecolor: str):
                       text=sublist[m].formula + '\nMiscibles\n At ' +
                       str(mistemp) + '°C',
                       fill='#0000FF',
-                      font=ft3,
+                      font=ft_subtitle,
                       tag='text',
                       anchor='w')
     C.lift('text')
@@ -172,14 +167,14 @@ def cvstitle(m1, m2):
                           530,
                           text='Solubility Fold Line Diagram of\n%s (%s)' %
                           ((sublist[m1].name), sublist[m1].formula),
-                          font=ft2,
+                          font=ft_bold,
                           fill='#FFFFFF')
         else:
             C.create_text(275,
                           530,
                           text='Solubility Fold Line Diagram of\n%s (%s)' %
                           ((sublist[m1].name), sublist[m1].formula),
-                          font=ft2,
+                          font=ft_bold,
                           fill='#0F102E')
     else:
         if isdark:
@@ -190,7 +185,7 @@ def cvstitle(m1, m2):
                 'Solubility Comparison Fold Line Diagram of\n%s (%s) and\n%s (%s)'
                 % ((sublist[m1].name), sublist[m1].formula,
                    (sublist[m2].name), sublist[m2].formula),
-                font=ft2,
+                font=ft_bold,
                 fill='#FFFFFF')
         else:
             C.create_text(
@@ -200,7 +195,7 @@ def cvstitle(m1, m2):
                 'Solubility Comparison Fold Line Diagram of\n%s (%s) and\n%s (%s)'
                 % ((sublist[m1].name), sublist[m1].formula,
                    (sublist[m2].name), sublist[m2].formula),
-                font=ft2,
+                font=ft_bold,
                 fill='#0F102E')
     window.update()
 
@@ -220,44 +215,46 @@ def normdraw(m):
     prevcpr = False
 
 
-def contradraw(m1, m2):
+def contradraw(m1: int, m2: int):
     list1 = draw(m1)
     list2 = draw(m2)
-    if list1[1] > list2[1]:
-        list2[1] = list1[1]
-    else:
-        list1[1] = list2[1]
-    if list1[2] < list2[2]:
-        list2[2] = list1[2]
-    else:
-        list1[2] = list2[2]
+
+    list1[1] = max(list1[1], list2[1])
+    list2[1] = max(list1[1], list2[1])
+    list1[2] = min(list1[2], list2[2])
+    list2[2] = min(list1[2], list2[2])
+
     cvstitle(m1, m2)
+
     if isdark:
+        # dark mode
         realdraw(list1, '#FFFFEE', '#EE00FF', '#FF6699')
         realdraw(list2, '#FFFFEE', '#00FFEE', '#9966FF')
         C.create_text(275,
                       477,
                       text=sublist[m1].formula,
                       fill='#FF6699',
-                      font=ft3)
+                      font=ft_subtitle)
         C.create_text(275,
                       465,
                       text=sublist[m2].formula,
                       fill='#9966FF',
-                      font=ft3)
+                      font=ft_subtitle)
     else:
+        # light mode
         realdraw(list1, '#332255', '#40709F', '#284E68')
         realdraw(list2, '#332255', '#9F7040', '#897983')
         C.create_text(275,
                       477,
                       text=sublist[m1].formula,
                       fill='#284E68',
-                      font=ft3)
+                      font=ft_subtitle)
         C.create_text(275,
                       465,
                       text=sublist[m2].formula,
                       fill='#897983',
-                      font=ft3)
+                      font=ft_subtitle)
+
     T.delete(0.0, 'end')
     T.insert(
         'end',
@@ -271,29 +268,31 @@ def search(ev=None):
     keylist = key.split()
     allsubdict = {}
     match = -1
+
     if key == '':
         return
-    for i in range(0, len(keylist)):
-        if keylist[i].casefold() == 'ferric':
+
+    for (i, key) in enumerate(keylist):
+        if key.casefold() == 'ferric':
             keylist[i] = 'iron(iii)'
-        if keylist[i].casefold() == 'ferrous':
+        if key.casefold() == 'ferrous':
             keylist[i] = 'iron(ii)'
-        if keylist[i].casefold() == 'cupric':
+        if key.casefold() == 'cupric':
             keylist[i] = 'copper(ii)'
-        if keylist[i].casefold() == 'cuprous':
+        if key.casefold() == 'cuprous':
             keylist[i] = 'copper(i)'
-        if keylist[i].casefold() == 'aluminum':
+        if key.casefold() == 'aluminum':
             keylist[i] = 'aluminium'
-        if keylist[i].casefold() == 'dichloride':
+        if key.casefold() == 'dichloride':
             keylist[i] = '(ii) chloride'
-        if keylist[i].casefold() == 'trichloride':
+        if key.casefold() == 'trichloride':
             keylist[i] = '(iii) chloride'
     for i in range(0, 665):
         allnamesub = True
         allformulasub = True
         for j in range(
                 0, len(keylist)
-        ):  #check if all substring is contained in formula or name
+        ):  # check if all substring is contained in formula or name
             if (str(sublist[i].name).casefold().find(
                     keylist[j].casefold()) == -1):
                 allnamesub = False
@@ -308,14 +307,15 @@ def search(ev=None):
                 varpc.set('Previous: %s\nCurrent:%s' %
                           (sublist[prev].formula, sublist[curr].formula))
                 T.insert('end', sublist[i].getInform()
-                         )  #check if it is exactly the same substance
+                         )  # check if it is exactly the same substance
                 normdraw(i)
                 return
             else:
                 allsubdict[
-                    sublist[i].name] = sublist[i].formula  #add to possble list
+                    sublist[i].name] = sublist[i].formula  # add to possble list
                 match = i
-    if len(allsubdict) == 1:  #only one possible
+
+    if len(allsubdict) == 1:  # only one possible
         prev = curr
         curr = match
         varpc.set('Previous: %s\nCurrent:%s' %
@@ -325,7 +325,8 @@ def search(ev=None):
             sublist[match].getInform())
         normdraw(match)
         return
-    elif len(allsubdict) != 0:  #multiple possibilities
+
+    elif len(allsubdict) != 0:  # multiple possibilities
         if len(allsubdict) > 50:
             T.insert(
                 'end',
@@ -339,7 +340,7 @@ def search(ev=None):
                 % str(allsubdict))
             return
         return
-    else:  #nothing matches
+    else:  # nothing matches
         T.insert('end', 'No result found. Please try again.')
         return
 
@@ -412,7 +413,7 @@ def getter(widget, path):
     y = frame.winfo_rooty() + widget.winfo_y()
     x1 = x + widget.winfo_width()
     y1 = y + widget.winfo_height()
-    ImageGrab.grab().crop((x, y, x1, y1)).save(path)
+    # ImageGrab.grab().crop((x, y, x1, y1)).save(path)
 
 
 def export():
@@ -430,40 +431,40 @@ def export():
 
 L = tk.Label(frame,
              text='Enter substance name or formula:',
-             font=ft2,
+             font=ft_bold,
              bg='#CDD7E2')
 L.grid(row=1, column=1, sticky='e')
 
-E = tk.Entry(frame, width=20, font=ft1, bg='#CDD7E2', relief='groove')
+E = tk.Entry(frame, width=20, font=ft_normal, bg='#CDD7E2', relief='groove')
 E.grid(row=1, column=2, sticky='w')
 
-T = tk.Text(frame, width=70, height=25, font=ft2, bg='#CDD7E2')
+T = tk.Text(frame, width=70, height=25, font=ft_bold, bg='#CDD7E2')
 T.grid(row=2, column=1, columnspan=5)
 
-B = tk.Button(frame, text='Find', command=search, font=ft1, bg='#CDD7E2')
+B = tk.Button(frame, text='Find', command=search, font=ft_normal, bg='#CDD7E2')
 B.grid(row=1, column=3)
 
 Bbg = tk.Button(frame,
                 text='Change Background',
                 command=backgr,
-                font=ft1,
+                font=ft_normal,
                 bg='#CDD7E2')
 Bbg.grid(row=1, column=4)
 
-Bcp = tk.Button(frame, text='Compare', command=compare, font=ft1, bg='#CDD7E2')
+Bcp = tk.Button(frame, text='Compare', command=compare, font=ft_normal, bg='#CDD7E2')
 Bcp.grid(row=1, column=5)
 
 Linf = tk.Label(
     frame,
     text=
     'This gadget is created by HFer-Kerman.\nAll data is from Wikipedia and follows CC BY-SA 3.0.\nVersion 0.2.2   2018/07/16   License: MIT',
-    font=ft3)
+    font=ft_subtitle)
 Linf.grid(row=3, column=1, columnspan=2)
 
-Lcpr = tk.Label(frame, textvariable=varpc, font=ft3)
+Lcpr = tk.Label(frame, textvariable=varpc, font=ft_subtitle)
 Lcpr.grid(row=3, column=3, columnspan=2)
 
-Bex = tk.Button(frame, text='Export', command=export, font=ft1, bg='#CDD7E2')
+Bex = tk.Button(frame, text='Export', command=export, font=ft_normal, bg='#CDD7E2')
 Bex.grid(row=3, column=5)
 
 E.bind('<KeyPress-Return>', search)
